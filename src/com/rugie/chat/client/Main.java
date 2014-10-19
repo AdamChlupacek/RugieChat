@@ -1,5 +1,7 @@
 package com.rugie.chat.client;
 
+import javafx.application.Application;
+
 import java.io.IOException;
 import java.net.SocketException;
 
@@ -12,14 +14,16 @@ import java.net.SocketException;
 public class Main {
 
   public static void main(String[] args){
-    try {
-      SocketSender sender = new SocketSender(9000);
-      sender.send("~NC~Adam");
-    } catch (SocketException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+//    try {
+//      SocketManager sender = new SocketManager(9000);
+//      sender.send("~NC~Adam");
+//    } catch (SocketException e) {
+//      e.printStackTrace();
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
+
+    Application.launch(GuiWindow.class);
   }
 
 }

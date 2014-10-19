@@ -44,8 +44,6 @@ public class SocketReceiver implements Runnable {
     while(running){
       receive();
     }
-
-    socket.close();
   }
 
   /**
@@ -58,10 +56,10 @@ public class SocketReceiver implements Runnable {
 
     try {
       socket.receive(packet);
+      sender.process(packet);
     } catch (IOException e) {
-      e.printStackTrace();
+      //e.printStackTrace();
     }
-    sender.process(packet);
 
   }
 
@@ -70,6 +68,7 @@ public class SocketReceiver implements Runnable {
    */
   public void stop(){
     this.running = false;
+    socket.close();
   }
 
 

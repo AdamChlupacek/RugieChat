@@ -1,5 +1,7 @@
 package com.rugie.chat.server;
 
+import com.sun.tools.internal.xjc.reader.xmlschema.bindinfo.BIConversion;
+
 import java.net.InetAddress;
 
 /**
@@ -16,10 +18,13 @@ public class User {
   private InetAddress address;
   private int port;
 
-  public User(String userName, InetAddress address, int port) {
+  private int id;
+
+  public User(String userName, InetAddress address, int port, int id) {
     this.userName = userName;
     this.address = address;
     this.port = port;
+    this.id = id;
   }
 
   public int getPingAttNo() {
@@ -36,5 +41,9 @@ public class User {
 
   public int getPort() {
     return port;
+  }
+
+  public int getId() {
+    return id;
   }
 }

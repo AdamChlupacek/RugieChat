@@ -12,4 +12,8 @@ public class Constants {
   public static final String PING = "~P~";
   public static final String MESSAGE = "~M~";
   public static final String DISCONNECT = "~DC~";
+
+
+  public static final String ID = "~I~";
+  public static final String NAME = "~UN~";
 }

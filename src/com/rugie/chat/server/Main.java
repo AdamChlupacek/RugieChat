@@ -2,6 +2,7 @@ package com.rugie.chat.server;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.Scanner;
 
 /**
  * Created with IntelliJ IDEA.
@@ -12,12 +13,30 @@ import java.net.SocketException;
 public class Main {
 
   public static void main(String[] args){
-    try {
-      SocketSender sender = new SocketSender(9000);
-      SocketReceiver receiver = new SocketReceiver(9000, sender);
+    SocketSender sender;
+    SocketReceiver receiver;
 
-      new Thread(sender).start();
-      new Thread(receiver).start();
+    try {
+      sender = new SocketSender(9000);
+      receiver = new SocketReceiver(9000, sender);
+
+      new Thread(sender,"Sender").start();
+      new Thread(receiver,"Receiver").start();
+
+      boolean running = true;
+      Scanner scanner = new Scanner(System.in);
+      while(running){
+        System.out.println("Input action: ");
+        String input = scanner.nextLine();
+
+        if (input.equals("stop")){
+          running = false;
+        }
+      }
+
+      sender.stop();
+      receiver.stop();
+
     } catch (SocketException e) {
       e.printStackTrace();
     } catch (IOException e) {

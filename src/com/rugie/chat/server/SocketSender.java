@@ -1,10 +1,13 @@
 package com.rugie.chat.server;
 
+import com.rugie.chat.Util;
 import com.sun.tools.internal.xjc.reader.xmlschema.bindinfo.BIConversion;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,15 +22,14 @@ public class SocketSender implements Runnable {
 
   private BufferedWriter fileW;
   private DatagramSocket socket;
-  private List<String> tasks;
+  private List<DatagramPacket> tasks;
 
   private List<User> users;
   private boolean running;
 
   public SocketSender(int port) throws IOException {
-    this.tasks = new ArrayList<String>();
     this.users = new ArrayList<User>();
-
+    this.tasks = new ArrayList<DatagramPacket>();
     this.socket = new DatagramSocket();
 
     long time = System.currentTimeMillis();
@@ -41,33 +43,64 @@ public class SocketSender implements Runnable {
     writeToFile("Starting server at port: " + port);
   }
 
-  private void doTasks(){
-    String[] curTasks = new String[tasks.size()];
-    tasks.toArray(curTasks);
-    tasks.clear();
+  private void doTasks() {
+    DatagramPacket[] curTasks = new DatagramPacket[tasks.size()];
 
-    for (String s: curTasks){
+    synchronized (this) {
+      curTasks = tasks.toArray(curTasks);
+      tasks.clear();
+    }
+
+    for (DatagramPacket packet: curTasks){
+      //if (packet.getData() == null) continue;
+      String s = new String(packet.getData());
+      System.out.println(s);
       writeToFile(s);
 
+      if (s.startsWith(Constants.NEW_CONNECT)){
+        int id = UniqueId.getIdentifier();
+        users.add(new User(Util.parseMessage(s,Constants.NEW_CONNECT),packet.getAddress(),packet.getPort(), id));
+        send(Constants.ID+id+Constants.ID, findUser(id));
+      }
       if (s.startsWith(Constants.MESSAGE)){
-        sendToAll(s.substring(3));
+        User user = findUser(Integer.parseInt(s.split(Constants.ID)[1]));
+        if (user == null){
+          System.out.println("User who is not registered send a message");
+        }else {
+          sendToAll(Constants.MESSAGE + Util.parseMessage(s,Constants.MESSAGE) + Constants.MESSAGE + Constants.NAME + user.getUserName()+Constants.NAME);
+        }
+      }
+      if (s.startsWith(Constants.PING)){
+        //sendToAll(s.substring(3));
+      }
+      if (s.startsWith(Constants.DISCONNECT)){
+        User user = findUser(Integer.parseInt(s.split(Constants.ID)[1]));
+        users.remove(user);
       }
     }
+
   }
 
   private void pingUsers() {
 
   }
 
+  private User findUser(int id){
+    for (User u: users){
+      if (id == u.getId()) return u;
+    }
+    return null;
+  }
+
   private void sendToAll(String s){
-    byte[] message = s.getBytes();
     for (User u: users) {
-      send(message,u);
+      send(s,u);
     }
   }
 
-  private void send(byte[] message, User u){
-    DatagramPacket packet = new DatagramPacket(message,0,message.length,u.getAddress(), u.getPort());
+  private void send(String message, User u){
+    byte[] bytes = message.getBytes();
+    DatagramPacket packet = new DatagramPacket(bytes,0,bytes.length,u.getAddress(), u.getPort());
     try {
       socket.send(packet);
     } catch (IOException e) {
@@ -87,23 +120,18 @@ public class SocketSender implements Runnable {
   }
 
   public void process(DatagramPacket packet) {
-    String message = new String(packet.getData());
-    if (message.startsWith(Constants.NEW_CONNECT)){
-      writeToFile(message);
-      this.users.add(new User(message.substring(4),packet.getAddress(),packet.getPort()));
-    }else {
-      tasks.add(message);
+    synchronized (this) {
+      tasks.add(packet);
     }
   }
-
   @Override
   public void run() {
     while(running){
       doTasks();
       pingUsers();
     }
-    socket.close();
     try {
+      socket.close();
       fileW.close();
     } catch (IOException e) {
       e.printStackTrace();
