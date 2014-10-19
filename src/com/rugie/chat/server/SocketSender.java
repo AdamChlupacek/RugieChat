@@ -1,14 +1,11 @@
 package com.rugie.chat.server;
 
+import com.rugie.chat.Delay;
 import com.rugie.chat.Util;
-import com.sun.tools.internal.xjc.reader.xmlschema.bindinfo.BIConversion;
 
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +14,12 @@ import java.util.List;
  * User: adamchlupacek
  * Date: 18/10/14
  * Time: 12:58
+ */
+
+/**
+ * A class for managing of the server functions, it takes the messages that are
+ * received via socket {@link com.rugie.chat.server.SocketSender} and parses them.
+ * Also creates a log of received messages.
  */
 public class SocketSender implements Runnable {
 
@@ -27,15 +30,22 @@ public class SocketSender implements Runnable {
   private List<User> users;
   private boolean running;
 
+  private Delay ping;
+
+  /**
+   * Constructor for the SocketSender class
+   * @param port on what port will the server operate
+   * @throws IOException
+   */
   public SocketSender(int port) throws IOException {
-    this.users = new ArrayList<User>();
-    this.tasks = new ArrayList<DatagramPacket>();
+    this.users = new ArrayList<>();
+    this.tasks = new ArrayList<>();
     this.socket = new DatagramSocket();
+    this.ping = new Delay(1000);
+    this.ping.start();
 
     long time = System.currentTimeMillis();
     File file = new File("ChatLog/" +"log_" + time + ".txt");
-//    file.mkdirs();
-//    file.createNewFile();
 
     this.fileW = new BufferedWriter(new FileWriter(file));
     this.running = true;
@@ -43,6 +53,10 @@ public class SocketSender implements Runnable {
     writeToFile("Starting server at port: " + port);
   }
 
+  /**
+   * Main function of the server, takes the packet that were received, creates a copy of them
+   * and proceeds to parse them and do actions depending on the content of the datagrams
+   */
   private void doTasks() {
     DatagramPacket[] curTasks = new DatagramPacket[tasks.size()];
 
@@ -52,16 +66,17 @@ public class SocketSender implements Runnable {
     }
 
     for (DatagramPacket packet: curTasks){
-      //if (packet.getData() == null) continue;
       String s = new String(packet.getData());
       System.out.println(s);
       writeToFile(s);
 
+      //Parses and adds a new user to the list of all active users
       if (s.startsWith(Constants.NEW_CONNECT)){
         int id = UniqueId.getIdentifier();
         users.add(new User(Util.parseMessage(s,Constants.NEW_CONNECT),packet.getAddress(),packet.getPort(), id));
         send(Constants.ID+id+Constants.ID, findUser(id));
       }
+      //Resend a message to all active users
       if (s.startsWith(Constants.MESSAGE)){
         User user = findUser(Integer.parseInt(s.split(Constants.ID)[1]));
         if (user == null){
@@ -70,9 +85,13 @@ public class SocketSender implements Runnable {
           sendToAll(Constants.MESSAGE + Util.parseMessage(s,Constants.MESSAGE) + Constants.MESSAGE + Constants.NAME + user.getUserName()+Constants.NAME);
         }
       }
+      //Ping check
       if (s.startsWith(Constants.PING)){
-        //sendToAll(s.substring(3));
+        User user = findUser(Integer.parseInt(s.split(Constants.ID)[1]));
+        user.resetPing();
+        send(Constants.PING + Constants.PING, user);
       }
+      //Notification of disconnected user
       if (s.startsWith(Constants.DISCONNECT)){
         User user = findUser(Integer.parseInt(s.split(Constants.ID)[1]));
         users.remove(user);
@@ -81,10 +100,29 @@ public class SocketSender implements Runnable {
 
   }
 
+  /**
+   * One per cycle check of active and time out users
+   */
   private void pingUsers() {
-
+    if (ping.isOver()){
+      List<User> remove = new ArrayList<>();
+      for (User u:users){
+        u.incrementPing();
+        if (u.getPingOver() >= 5){
+          remove.add(u);
+          send(Constants.DISCONNECT,u);
+        }
+      }
+      users.removeAll(remove);
+      ping.start();
+    }
   }
 
+  /**
+   * finding a user in the user list
+   * @param id id of the user
+   * @return returns found user, or null in case that the user does not exist
+   */
   private User findUser(int id){
     for (User u: users){
       if (id == u.getId()) return u;
@@ -92,6 +130,10 @@ public class SocketSender implements Runnable {
     return null;
   }
 
+  /**
+   * Sends a message to all users
+   * @param s contents of the message
+   */
   private void sendToAll(String s){
     for (User u: users) {
       send(s,u);

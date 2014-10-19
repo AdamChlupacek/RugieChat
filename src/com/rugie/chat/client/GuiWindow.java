@@ -11,6 +11,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -87,6 +88,13 @@ public class GuiWindow extends Application {
           final SocketManager manager = new SocketManager(ip.getText(),Integer.parseInt(port.getText()), textArea);
           manager.send(Constants.NEW_CONNECT + username.getText() + Constants.NEW_CONNECT);
           manager.setAction(textArea::appendText);
+          manager.stopAction(()->{
+            try {
+              primaryStage.close();
+            } catch (Exception e1) {
+              e1.printStackTrace();
+            }
+          });
 
           new Thread(manager,"Socket-Manager").start();
           send.setOnAction(event -> {
@@ -100,9 +108,21 @@ public class GuiWindow extends Application {
             }
           });
 
+          sendField.setOnKeyPressed(event->{
+            if (event.getCode().equals(KeyCode.ENTER)){
+              if (!sendField.getText().isEmpty()){
+                try {
+                  manager.send(Constants.MESSAGE + sendField.getText() + Constants.MESSAGE);
+                  sendField.clear();
+                } catch (IOException e1) {
+                  e1.printStackTrace();
+                }
+              }
+            }
+          });
+
           primaryStage.setOnCloseRequest(event -> {
             try {
-              stop();
               manager.stop();
             } catch (Exception e1) {
               e1.printStackTrace();
@@ -121,6 +141,7 @@ public class GuiWindow extends Application {
         } catch (Exception e1) {
           e1.printStackTrace();
         }
+
       }
     });
 

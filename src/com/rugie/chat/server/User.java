@@ -11,8 +11,6 @@ import java.net.InetAddress;
  * Time: 13:11
  */
 public class User {
-
-  private int pingAttNo;
   private String userName;
 
   private InetAddress address;
@@ -20,16 +18,17 @@ public class User {
 
   private int id;
 
+  private int pingOver;
+
+
   public User(String userName, InetAddress address, int port, int id) {
     this.userName = userName;
     this.address = address;
     this.port = port;
     this.id = id;
+    this.pingOver = 0;
   }
 
-  public int getPingAttNo() {
-    return pingAttNo;
-  }
 
   public String getUserName() {
     return userName;
@@ -45,5 +44,17 @@ public class User {
 
   public int getId() {
     return id;
+  }
+
+  public void incrementPing(){
+    this.pingOver++;
+  }
+
+  public void resetPing(){
+    this.pingOver = 0;
+  }
+
+  public int getPingOver() {
+    return pingOver;
   }
 }
