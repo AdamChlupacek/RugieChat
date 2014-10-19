@@ -13,6 +13,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -99,6 +100,14 @@ public class GuiWindow extends Application {
             }
           });
 
+          primaryStage.setOnCloseRequest(event -> {
+            try {
+              stop();
+              manager.stop();
+            } catch (Exception e1) {
+              e1.printStackTrace();
+            }
+          });
           subGrid.add(sendField,0,0);
           subGrid.add(send,1,0);
 
@@ -109,7 +118,7 @@ public class GuiWindow extends Application {
           primaryStage.setScene(scene);
 
           sendField.requestFocus();
-        } catch (IOException e1) {
+        } catch (Exception e1) {
           e1.printStackTrace();
         }
       }

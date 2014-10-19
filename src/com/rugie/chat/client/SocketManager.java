@@ -73,6 +73,11 @@ public class SocketManager implements Runnable{
     }
   }
 
+  public void stop(){
+    this.running = false;
+    socket.close();
+  }
+
   public void setAction(SetAction action) {
     this.action = action;
   }
